@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/refresh-medians",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
