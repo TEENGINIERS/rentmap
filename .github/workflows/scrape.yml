@@ -1,0 +1,51 @@
+name: scrape
+
+# Daily at 03:00 IST = 21:30 UTC. Quiet hours for Indian sites.
+on:
+  schedule:
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Source to run (housing, 99acres, magicbricks, nobroker)"
+        required: false
+        default: "housing"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [housing, 99acres, magicbricks, nobroker]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Skip if not selected
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source != matrix.source }}
+        run: echo "skipping ${{ matrix.source }}" && exit 0
+
+      - name: Run scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm tsx scrapers/src/index.ts ${{ matrix.source }}
+
+      - name: Upload run stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-stats-${{ matrix.source }}-${{ github.run_id }}
+          path: scrapers/runs/*.json
+          if-no-files-found: warn
+          retention-days: 30

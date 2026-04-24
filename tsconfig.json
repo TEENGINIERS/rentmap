@@ -25,7 +25,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "scrapers/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist"]
+  "exclude": ["node_modules", ".next", "dist", "scrapers/runs", "scrapers/fixtures"]
 }
