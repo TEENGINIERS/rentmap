@@ -37,7 +37,8 @@ pnpm install
 cp .env.example .env.local
 # Required: DATABASE_URL, DIRECT_URL, NEXT_PUBLIC_SUPABASE_URL,
 # NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-# NEXT_PUBLIC_MAPBOX_TOKEN, NEXT_PUBLIC_SITE_URL, CRON_SECRET
+# NEXT_PUBLIC_SITE_URL, CRON_SECRET
+# (Map tiles: MapLibre + OpenFreeMap — no token needed. Override in src/lib/map/config.ts.)
 
 # 4. Generate + apply migrations
 pnpm db:generate   # emits drizzle/0000_*.sql from the schema

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import mapboxgl, { type Map, type GeoJSONSource } from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import maplibregl, { type Map, type GeoJSONSource } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { ListingCardDTO } from "@/lib/db/queries/listings";
 import type { PriceVariant } from "@/lib/truth/price-anomaly";
 import {
@@ -9,11 +9,9 @@ import {
   CLUSTER_RADIUS,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
-  MAPBOX_STYLE,
+  MAP_STYLE_URL,
   MAX_BOUNDS,
 } from "@/lib/map/config";
-
-const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 // Color-code pins by price variant — this *is* the 30-second read.
 const VARIANT_COLORS: Record<PriceVariant, string> = {
@@ -54,15 +52,10 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
   // Init map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    if (!TOKEN) {
-      console.warn("NEXT_PUBLIC_MAPBOX_TOKEN missing — map disabled.");
-      return;
-    }
-    mapboxgl.accessToken = TOKEN;
 
-    const map = new mapboxgl.Map({
+    const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAPBOX_STYLE,
+      style: MAP_STYLE_URL,
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       maxBounds: MAX_BOUNDS,
@@ -125,16 +118,14 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
       });
 
       // Cluster tap → zoom in.
-      map.on("click", "clusters", (e) => {
+      map.on("click", "clusters", async (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
         const clusterId = features[0]?.properties?.cluster_id;
         if (clusterId == null) return;
         const source = map.getSource("listings") as GeoJSONSource;
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || zoom == null) return;
-          const geom = features[0]!.geometry as GeoJSON.Point;
-          map.easeTo({ center: geom.coordinates as [number, number], zoom });
-        });
+        const zoom = await source.getClusterExpansionZoom(clusterId);
+        const geom = features[0]!.geometry as GeoJSON.Point;
+        map.easeTo({ center: geom.coordinates as [number, number], zoom });
       });
 
       // Unclustered pin tap → onSelect.

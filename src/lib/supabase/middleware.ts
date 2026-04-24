@@ -28,9 +28,14 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh session token (if expiring). Do NOT remove — middleware is the refresh pump.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Wrapped defensively so a Supabase outage / local-dev without-Supabase doesn't 500.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    user = null;
+  }
 
   const pathname = request.nextUrl.pathname;
 

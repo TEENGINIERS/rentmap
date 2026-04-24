@@ -40,10 +40,14 @@ export default async function ListingDetailPage({
   if (!listing) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const favorited = user ? await isFavorited(user.id, listing.id) : false;
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    user = null;
+  }
+  const favorited = user ? await isFavorited(user.id, listing.id).catch(() => false) : false;
 
   const structuredData = {
     "@context": "https://schema.org",

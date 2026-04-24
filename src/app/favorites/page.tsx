@@ -8,9 +8,13 @@ export const metadata: Metadata = { title: "Favorites", robots: { index: false }
 
 export default async function FavoritesPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    user = null;
+  }
 
   if (!user) redirect("/login?next=/favorites");
 

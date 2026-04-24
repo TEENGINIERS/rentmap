@@ -1,16 +1,13 @@
 import type { Config } from "drizzle-kit";
 
-if (!process.env.DIRECT_URL) {
-  throw new Error("DIRECT_URL must be set for drizzle-kit");
-}
+// For `generate` we only need the schema; `migrate`/`push` needs a URL.
+const url = process.env.DIRECT_URL ?? "postgresql://__placeholder__";
 
 export default {
   schema: "./src/lib/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
-  dbCredentials: {
-    url: process.env.DIRECT_URL,
-  },
+  dbCredentials: { url },
   verbose: true,
   strict: true,
 } satisfies Config;

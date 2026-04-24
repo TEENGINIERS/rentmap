@@ -19,10 +19,12 @@ export default async function LoginPage({
   const error = typeof sp.error === "string" ? sp.error : null;
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) redirect(next);
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) redirect(next);
+  } catch {
+    // Supabase unreachable — fall through to render the form.
+  }
 
   return (
     <div className="container mx-auto flex min-h-[60vh] max-w-md items-center px-4">
