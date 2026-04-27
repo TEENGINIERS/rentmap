@@ -1,17 +1,16 @@
 import Link from "next/link";
-import { Heart, MapPin } from "lucide-react";
+import { Heart, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <MapPin className="h-5 w-5 text-primary" />
-          <span>Rentmap</span>
-          <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
-            · Bangalore
-          </span>
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-14 items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900">
+          <Home className="h-5 w-5" />
+        </Link>
+        <Link href="/" className="text-lg font-semibold tracking-tight text-emerald-700">
+          FastFlats
         </Link>
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">

@@ -60,3 +60,6 @@ next-env.d.ts
 # Scraper runs + HTML fixtures
 scrapers/runs/
 scrapers/fixtures/*.html
+
+# Playwright Facebook session cookies — DO NOT COMMIT (contains login tokens)
+.fb-session.json

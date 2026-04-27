@@ -4,6 +4,7 @@ import maplibregl, { type Map, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { ListingCardDTO } from "@/lib/db/queries/listings";
 import type { PriceVariant } from "@/lib/truth/price-anomaly";
+import type { MapFocus, MapPoi } from "@/lib/store/listings-store";
 import {
   CLUSTER_MAX_ZOOM,
   CLUSTER_RADIUS,
@@ -13,15 +14,24 @@ import {
   MAX_BOUNDS,
 } from "@/lib/map/config";
 
-// Color-code pins by price variant — this *is* the 30-second read.
 const VARIANT_COLORS: Record<PriceVariant, string> = {
-  fair: "#10b981", // emerald-500
-  over: "#ef4444", // red-500
-  under: "#3b82f6", // blue-500
-  unknown: "#a1a1aa", // zinc-400
+  fair: "#10b981",
+  over: "#ef4444",
+  under: "#3b82f6",
+  unknown: "#a1a1aa",
 };
 
-function toGeoJSON(listings: ListingCardDTO[]): GeoJSON.FeatureCollection {
+const POI_COLOR: Record<string, string> = {
+  metro: "#7c3aed",
+  mall: "#ea580c",
+  hospital: "#dc2626",
+  restaurant: "#f59e0b",
+  school: "#0ea5e9",
+  bank: "#16a34a",
+  park: "#22c55e",
+};
+
+function listingsGeoJSON(listings: ListingCardDTO[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: listings.map((l) => ({
@@ -38,18 +48,34 @@ function toGeoJSON(listings: ListingCardDTO[]): GeoJSON.FeatureCollection {
   };
 }
 
+function poisGeoJSON(pois: MapPoi[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: pois.map((p) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+      properties: {
+        name: p.name,
+        category: p.category,
+        color: POI_COLOR[p.category] ?? "#6b7280",
+      },
+    })),
+  };
+}
+
 interface MapViewProps {
   listings: ListingCardDTO[];
+  pois?: MapPoi[];
+  focus?: MapFocus | null;
   onSelect?: (listingId: string) => void;
   onBboxChange?: (bbox: [number, number, number, number]) => void;
 }
 
-export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
+export function MapView({ listings, pois = [], focus, onSelect, onBboxChange }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Init map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -58,11 +84,12 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
       style: MAP_STYLE_URL,
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
-      maxBounds: MAX_BOUNDS,
+      ...(MAX_BOUNDS ? { maxBounds: MAX_BOUNDS } : {}),
     });
     mapRef.current = map;
 
     map.on("load", () => {
+      // Listings source — clustered.
       map.addSource("listings", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -88,10 +115,7 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
         type: "symbol",
         source: "listings",
         filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-size": 12,
-        },
+        layout: { "text-field": "{point_count_abbreviated}", "text-size": 12 },
         paint: { "text-color": "#ffffff" },
       });
       map.addLayer({
@@ -117,7 +141,43 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
         },
       });
 
-      // Cluster tap → zoom in.
+      // POI source — separate, no clustering, smaller markers.
+      map.addSource("pois", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "poi-points",
+        type: "circle",
+        source: "pois",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": ["get", "color"],
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.85,
+        },
+      });
+      map.addLayer({
+        id: "poi-labels",
+        type: "symbol",
+        source: "pois",
+        layout: {
+          "text-field": ["get", "name"],
+          "text-size": 11,
+          "text-offset": [0, 1.2],
+          "text-anchor": "top",
+          "text-optional": true,
+          "text-allow-overlap": false,
+        },
+        paint: {
+          "text-color": "#374151",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.5,
+        },
+      });
+
+      // Cluster click → zoom in.
       map.on("click", "clusters", async (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
         const clusterId = features[0]?.properties?.cluster_id;
@@ -128,19 +188,17 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
         map.easeTo({ center: geom.coordinates as [number, number], zoom });
       });
 
-      // Unclustered pin tap → onSelect.
       map.on("click", "unclustered-point", (e) => {
         const f = e.features?.[0];
         const id = f?.properties?.id as string | undefined;
         if (id) onSelect?.(id);
       });
 
-      for (const layer of ["clusters", "unclustered-point"]) {
+      for (const layer of ["clusters", "unclustered-point", "poi-points"]) {
         map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
         map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
       }
 
-      // Debounced bbox reporter.
       let moveTimer: ReturnType<typeof setTimeout> | null = null;
       map.on("moveend", () => {
         if (!onBboxChange) return;
@@ -159,18 +217,39 @@ export function MapView({ listings, onSelect, onBboxChange }: MapViewProps) {
       map.remove();
       mapRef.current = null;
     };
-    // onSelect/onBboxChange intentionally omitted — stable-ref expected from parent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update source data when listings change.
+  // Update listings source when listings change.
   useEffect(() => {
     if (!ready) return;
     const map = mapRef.current;
     if (!map) return;
-    const source = map.getSource("listings") as GeoJSONSource | undefined;
-    source?.setData(toGeoJSON(listings));
+    const src = map.getSource("listings") as GeoJSONSource | undefined;
+    src?.setData(listingsGeoJSON(listings));
   }, [listings, ready]);
+
+  // Update POI source.
+  useEffect(() => {
+    if (!ready) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const src = map.getSource("pois") as GeoJSONSource | undefined;
+    src?.setData(poisGeoJSON(pois));
+  }, [pois, ready]);
+
+  // Fly to focus.
+  useEffect(() => {
+    if (!ready || !focus) return;
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({
+      center: [focus.lng, focus.lat],
+      zoom: focus.zoom ?? 14,
+      essential: true,
+      duration: 1200,
+    });
+  }, [focus, ready]);
 
   return <div ref={containerRef} className="h-full w-full" data-testid="map" />;
 }

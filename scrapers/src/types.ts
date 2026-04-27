@@ -7,7 +7,12 @@
  * objects without any DB dependency (eases testing with HTML fixtures).
  */
 
-export type SourcePlatform = "99acres" | "magicbricks" | "housing" | "nobroker";
+export type SourcePlatform =
+  | "99acres"
+  | "magicbricks"
+  | "housing"
+  | "nobroker"
+  | "facebook";
 
 export interface ParsedListing {
   sourcePlatform: SourcePlatform;

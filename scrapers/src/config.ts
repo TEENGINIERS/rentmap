@@ -32,4 +32,5 @@ export const SOURCE_BASE_URLS: Record<SourcePlatform, string> = {
   magicbricks: "https://www.magicbricks.com",
   housing: "https://housing.com",
   nobroker: "https://www.nobroker.in",
+  facebook: "https://www.facebook.com",
 };

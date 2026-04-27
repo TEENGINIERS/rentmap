@@ -2,24 +2,34 @@
  * Scraper CLI.
  *
  * Usage:
- *   pnpm scrape                          # all sources, sequentially
+ *   pnpm scrape                          # all HTTP sources, sequentially
  *   pnpm scrape:housing                  # one source
  *   pnpm scrape housing 99acres          # subset
+ *   pnpm scrape:facebook                 # FB groups (uses Playwright + saved session)
  */
 import { runSource } from "./run";
 import { ALL_PLATFORMS, SOURCES } from "./sources";
-import type { SourcePlatform } from "./types";
+import { runFacebookScraper } from "./sources/facebook";
+import type { ScrapeStats, SourcePlatform } from "./types";
+
+const ALL_TARGETS: SourcePlatform[] = [...ALL_PLATFORMS, "facebook"];
+const VALID_TARGETS = new Set<SourcePlatform>(ALL_TARGETS);
 
 function parseArgs(argv: string[]): SourcePlatform[] {
   const args = argv.slice(2).filter(Boolean);
-  if (args.length === 0) return ALL_PLATFORMS;
-  const invalid = args.filter((a) => !(a in SOURCES));
+  if (args.length === 0) return ALL_TARGETS;
+  const invalid = args.filter((a) => !VALID_TARGETS.has(a as SourcePlatform));
   if (invalid.length > 0) {
     console.error(`unknown source(s): ${invalid.join(", ")}`);
-    console.error(`valid: ${ALL_PLATFORMS.join(", ")}`);
+    console.error(`valid: ${ALL_TARGETS.join(", ")}`);
     process.exit(2);
   }
   return args as SourcePlatform[];
+}
+
+async function runOne(platform: SourcePlatform): Promise<ScrapeStats> {
+  if (platform === "facebook") return runFacebookScraper();
+  return runSource(SOURCES[platform]);
 }
 
 async function main() {
@@ -28,9 +38,8 @@ async function main() {
 
   let anyFailure = false;
   for (const platform of targets) {
-    const cfg = SOURCES[platform];
     try {
-      const stats = await runSource(cfg);
+      const stats = await runOne(platform);
       const summary = [
         `source=${stats.source}`,
         `pages=${stats.pagesFetched}`,
