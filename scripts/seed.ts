@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
-import { locality, listing } from "../src/lib/db/schema";
+import { locality } from "../src/lib/db/schema";
 
 type LocalitySeed = {
   slug: string;
@@ -81,7 +81,9 @@ async function main() {
   const localityRows = await db.select({ id: locality.id, slug: locality.slug }).from(locality);
   const localityIdBySlug = new Map(localityRows.map((r) => [r.slug, r.id]));
 
-  // ---- Listings (UPSERT on (source_platform, source_listing_id)) ----
+  // ---- Listings (UPSERT on (source_platform, source_listing_id) where not null) ----
+  // Raw SQL because Drizzle's onConflictDoUpdate doesn't emit the WHERE clause
+  // required to match a partial unique index.
   let inserted = 0;
   for (const item of listings) {
     const localityId = localityIdBySlug.get(item.localitySlug);
@@ -91,57 +93,49 @@ async function main() {
     }
 
     const sourceListingId = `seed-${item.slug}`;
+    const locationExpr = sql`ST_SetSRID(ST_MakePoint(${item.lng}, ${item.lat}), 4326)::geography`;
 
-    await db
-      .insert(listing)
-      .values({
-        slug: item.slug,
-        title: item.title,
-        description: item.description ?? null,
-        bhk: item.bhk,
-        rentInr: item.rentInr,
-        depositInr: item.depositInr ?? null,
-        areaSqft: item.areaSqft ?? null,
-        floor: item.floor ?? null,
-        totalFloors: item.totalFloors ?? null,
-        furnishing: item.furnishing ?? null,
-        availableFrom: item.availableFrom ?? null,
-        location: { lat: item.lat, lng: item.lng },
-        addressLine: item.addressLine ?? null,
-        localityId,
-        photos: item.photos,
-        contactName: item.contactName ?? null,
-        sourceLabel: item.sourceLabel,
-        sourcePlatform: "seed",
-        sourceListingId,
-        firstSeenAt: new Date(),
-        lastSeenAt: new Date(),
-        isActive: true,
-      })
-      .onConflictDoUpdate({
-        target: [listing.sourcePlatform, listing.sourceListingId],
-        set: {
-          slug: item.slug,
-          title: item.title,
-          description: item.description ?? null,
-          rentInr: item.rentInr,
-          depositInr: item.depositInr ?? null,
-          areaSqft: item.areaSqft ?? null,
-          floor: item.floor ?? null,
-          totalFloors: item.totalFloors ?? null,
-          furnishing: item.furnishing ?? null,
-          availableFrom: item.availableFrom ?? null,
-          location: { lat: item.lat, lng: item.lng },
-          addressLine: item.addressLine ?? null,
-          localityId,
-          photos: item.photos,
-          contactName: item.contactName ?? null,
-          sourceLabel: item.sourceLabel,
-          lastSeenAt: new Date(),
-          isActive: true,
-          updatedAt: new Date(),
-        },
-      });
+    await db.execute(sql`
+      INSERT INTO listing (
+        slug, title, description, bhk, rent_inr, deposit_inr, area_sqft,
+        floor, total_floors, furnishing, available_from,
+        location, address_line, locality_id,
+        photos, contact_name, source_label,
+        source_platform, source_listing_id,
+        first_seen_at, last_seen_at, is_active, updated_at
+      ) VALUES (
+        ${item.slug}, ${item.title}, ${item.description ?? null},
+        ${item.bhk}, ${item.rentInr}, ${item.depositInr ?? null}, ${item.areaSqft ?? null},
+        ${item.floor ?? null}, ${item.totalFloors ?? null},
+        ${item.furnishing ?? null}, ${item.availableFrom ?? null},
+        ${locationExpr}, ${item.addressLine ?? null}, ${localityId},
+        ${JSON.stringify(item.photos)}::jsonb,
+        ${item.contactName ?? null}, ${item.sourceLabel},
+        'seed', ${sourceListingId},
+        now(), now(), true, now()
+      )
+      ON CONFLICT (source_platform, source_listing_id)
+      WHERE source_listing_id IS NOT NULL
+      DO UPDATE SET
+        slug = EXCLUDED.slug,
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        rent_inr = EXCLUDED.rent_inr,
+        deposit_inr = EXCLUDED.deposit_inr,
+        area_sqft = EXCLUDED.area_sqft,
+        floor = EXCLUDED.floor,
+        total_floors = EXCLUDED.total_floors,
+        furnishing = EXCLUDED.furnishing,
+        available_from = EXCLUDED.available_from,
+        location = EXCLUDED.location,
+        address_line = EXCLUDED.address_line,
+        photos = EXCLUDED.photos,
+        contact_name = EXCLUDED.contact_name,
+        source_label = EXCLUDED.source_label,
+        last_seen_at = now(),
+        is_active = true,
+        updated_at = now()
+    `);
     inserted += 1;
   }
   console.log(`  ✓ ${inserted} listings upserted`);

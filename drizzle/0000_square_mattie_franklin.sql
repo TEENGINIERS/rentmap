@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS "building" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
-	"location" "geography(Point, 4326)" NOT NULL,
+	"location" geography(Point, 4326) NOT NULL,
 	"locality_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "building_slug_unique" UNIQUE("slug")
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS "listing" (
 	"total_floors" smallint,
 	"furnishing" text,
 	"available_from" date,
-	"location" "geography(Point, 4326)" NOT NULL,
+	"location" geography(Point, 4326) NOT NULL,
 	"address_line" text,
 	"locality_id" uuid NOT NULL,
 	"building_id" uuid,
@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS "locality" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
-	"centroid" "geography(Point, 4326)" NOT NULL,
-	"boundary" "geography(Polygon, 4326)",
+	"centroid" geography(Point, 4326) NOT NULL,
+	"boundary" geography(Polygon, 4326),
 	"parent_locality_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "locality_slug_unique" UNIQUE("slug")
