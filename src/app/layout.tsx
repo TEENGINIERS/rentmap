@@ -10,14 +10,14 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "FastFlats — Bangalore Rentals, on a Map, with AI",
-    template: "%s | FastFlats",
+    default: "Rentmap — Bangalore Rentals, on a Map, with AI",
+    template: "%s | Rentmap",
   },
   description:
     "Find your next Bangalore flat by chatting. Owner vs broker, fair vs overpriced, all on one immersive map.",
   openGraph: {
     type: "website",
-    siteName: "FastFlats",
+    siteName: "Rentmap",
     locale: "en_IN",
   },
   twitter: { card: "summary_large_image" },

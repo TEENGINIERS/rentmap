@@ -10,7 +10,7 @@ export function Header() {
           <Home className="h-5 w-5" />
         </Link>
         <Link href="/" className="text-lg font-semibold tracking-tight text-emerald-700">
-          FastFlats
+          Rentmap
         </Link>
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">

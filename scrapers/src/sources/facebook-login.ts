@@ -16,7 +16,7 @@ const STORAGE_STATE_PATH = process.env.FB_STORAGE_STATE_PATH ?? ".fb-session.jso
 
 async function main() {
   console.log("");
-  console.log("FastFlats — Facebook session capture");
+  console.log("Rentmap — Facebook session capture");
   console.log("------------------------------------");
   console.log(`Storage state will be saved to: ${STORAGE_STATE_PATH}`);
   console.log("");

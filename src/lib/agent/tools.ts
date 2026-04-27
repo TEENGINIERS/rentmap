@@ -80,7 +80,7 @@ export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "find_area",
     description:
-      "Look up a Bangalore locality from the FastFlats database. Returns centroid coordinates + slug. Use this for known neighborhoods (Koramangala, Whitefield, HSR, Indiranagar, etc.) — it is faster and more accurate than geocode for these.",
+      "Look up a Bangalore locality from the Rentmap database. Returns centroid coordinates + slug. Use this for known neighborhoods (Koramangala, Whitefield, HSR, Indiranagar, etc.) — it is faster and more accurate than geocode for these.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -332,7 +332,7 @@ async function execFuzzySearch(args: ToolArgs) {
 // geocode — Nominatim
 // ============================================================================
 
-const NOMINATIM_UA = "FastFlats/1.0 (rentmap chat agent)";
+const NOMINATIM_UA = "Rentmap/1.0 (rentmap chat agent)";
 
 async function execGeocode(args: ToolArgs) {
   const placeRaw = String(args.place ?? "").trim();

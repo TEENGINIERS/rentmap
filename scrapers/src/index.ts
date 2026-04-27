@@ -2,17 +2,19 @@
  * Scraper CLI.
  *
  * Usage:
- *   pnpm scrape                          # all HTTP sources, sequentially
+ *   pnpm scrape                          # all sources, sequentially
  *   pnpm scrape:housing                  # one source
  *   pnpm scrape housing 99acres          # subset
- *   pnpm scrape:facebook                 # FB groups (uses Playwright + saved session)
+ *   pnpm scrape:nobroker                 # NoBroker (Playwright + XHR sniff)
+ *   pnpm scrape:facebook                 # FB groups (Playwright + saved session)
  */
 import { runSource } from "./run";
-import { ALL_PLATFORMS, SOURCES } from "./sources";
+import { ALL_PLATFORMS, SOURCES, type HttpSourcePlatform } from "./sources";
 import { runFacebookScraper } from "./sources/facebook";
+import { runNoBrokerScraper } from "./sources/nobroker";
 import type { ScrapeStats, SourcePlatform } from "./types";
 
-const ALL_TARGETS: SourcePlatform[] = [...ALL_PLATFORMS, "facebook"];
+const ALL_TARGETS: SourcePlatform[] = [...ALL_PLATFORMS, "nobroker", "facebook"];
 const VALID_TARGETS = new Set<SourcePlatform>(ALL_TARGETS);
 
 function parseArgs(argv: string[]): SourcePlatform[] {
@@ -29,7 +31,8 @@ function parseArgs(argv: string[]): SourcePlatform[] {
 
 async function runOne(platform: SourcePlatform): Promise<ScrapeStats> {
   if (platform === "facebook") return runFacebookScraper();
-  return runSource(SOURCES[platform]);
+  if (platform === "nobroker") return runNoBrokerScraper();
+  return runSource(SOURCES[platform as HttpSourcePlatform]);
 }
 
 async function main() {
