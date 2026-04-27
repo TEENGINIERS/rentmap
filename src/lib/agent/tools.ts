@@ -49,6 +49,11 @@ export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
           description:
             "Maximum distance (km) from (near_lat, near_lng). Requires near_lat+near_lng. Default 5.",
         },
+        sort_by: {
+          type: Type.STRING,
+          description:
+            'How to order results: "rent_asc" (cheapest first), "rent_desc" (most expensive first), "newest" (default), "distance" (requires near_lat/near_lng).',
+        },
         limit: {
           type: Type.INTEGER,
           description: "Max results to return (1..50). Default 30.",
@@ -267,12 +272,18 @@ async function execFuzzySearch(args: ToolArgs) {
   if (maxRent != null && maxRent > 0) conds.push(sql`l.rent_inr <= ${maxRent}`);
   if (localitySlug) conds.push(sql`loc.slug = ${localitySlug}`);
 
+  const sortBy = String(args.sort_by ?? "").toLowerCase();
   let orderBy = sql`l.created_at DESC`;
+  let distExpr: ReturnType<typeof sql> | null = null;
   if (nearLat != null && nearLng != null) {
-    const distExpr = sql`ST_Distance(l.location, ST_SetSRID(ST_MakePoint(${nearLng}, ${nearLat}), 4326)::geography)`;
+    distExpr = sql`ST_Distance(l.location, ST_SetSRID(ST_MakePoint(${nearLng}, ${nearLat}), 4326)::geography)`;
     if (maxDistKm != null) conds.push(sql`${distExpr} <= ${maxDistKm * 1000}`);
     orderBy = distExpr;
   }
+  if (sortBy === "rent_asc") orderBy = sql`l.rent_inr ASC`;
+  else if (sortBy === "rent_desc") orderBy = sql`l.rent_inr DESC`;
+  else if (sortBy === "newest") orderBy = sql`l.created_at DESC`;
+  else if (sortBy === "distance" && distExpr) orderBy = distExpr;
 
   const whereSql = sql.join(conds, sql` AND `);
 

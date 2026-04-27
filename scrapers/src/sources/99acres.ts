@@ -1,33 +1,24 @@
 /**
- * 99acres parser — STUB.
+ * 99acres parser — STUB (HTTP-blocked).
  *
- * Status: scaffold only. The selectors below are best-guess based on
- * public listing pages as of the time of writing. They will need to be
- * calibrated against real fetched HTML before this goes live.
+ * Status: 99acres is fronted by Akamai with an aggressive WAF. Plain HTTP
+ * requests — even for /robots.txt — return "Access Denied" with no bypass
+ * via headers/UA spoofing alone. Probed 2026-04-27.
  *
- * How to implement:
- *   1. Run `curl -A "$SCRAPER_USER_AGENT" "https://www.99acres.com/rent-2-bhk-property-bangalore"`
- *      and save to scrapers/fixtures/99acres-index.html
- *   2. Open in a browser; inspect the listing card and detail page structure.
- *   3. Fill in parseIndex() to return detail URLs + next-page link.
- *   4. Fill in parseDetail() to pull: rent, bhk, area, lat/lng, locality,
- *      photos, contact. Return null if any required field is missing.
- *   5. Test against fixture:
- *        import { readFileSync } from "node:fs";
- *        const html = readFileSync("scrapers/fixtures/99acres-index.html", "utf8");
- *        const parsed = ninetyNineAcresConfig.parseIndex(html, "https://...");
- *        console.log(parsed);
- *   6. Remove the throw below and flip STATUS to "live".
+ * Realistic paths to ship:
+ *   1. Playwright with stealth plugin (puppeteer-extra-plugin-stealth or
+ *      playwright-extra) AND a residential-IP proxy (Bright Data, Oxylabs,
+ *      ScraperAPI). Akamai also fingerprints TLS / browser characteristics,
+ *      so residential proxy alone won't be enough.
+ *   2. ScraperAPI / ScrapingBee / Apify managed actor (~$30-100/mo) — they
+ *      operate the proxy + browser farm and charge per page. Best ROI for
+ *      a small operation; defers maintenance burden to a vendor.
+ *   3. Skip 99acres for v2 and rely on housing.com + magicbricks +
+ *      nobroker + facebook for inventory coverage. 99acres has high broker
+ *      density anyway; the truth-badge value is lower here.
  *
- * Known gotchas:
- *   - 99acres shows contact numbers only after a "View Details" tap
- *     (JS-triggered reveal). If phone hash is critical for owner/broker
- *     detection, we may need Playwright for detail pages. For v2.0, ship
- *     without phone — the detector runs on name + cross-listing titles.
- *   - URL patterns like `/2-bhk-flats-apartments-for-rent-in-bangalore-ffid-p-N`
- *     — paginate by changing `-p-N`.
- *   - Pages embed a large JSON blob at the bottom — worth checking
- *     `window.initialData` before resorting to Cheerio selectors.
+ * Until one of those is wired up, this remains a no-op (the runner exits
+ * cleanly with parsed=0 and a single robots/network error in stats).
  */
 
 import type { SourceConfig } from "../run";
