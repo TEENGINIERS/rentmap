@@ -12,7 +12,11 @@ import type { ListingCardDTO } from "@/lib/db/queries/listings";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "gemini-2.5-flash";
+// Free-tier reality (this user's project): gemini-2.5-flash → 20 RPD,
+// gemini-2.0-flash → 0 RPD (blocked), gemini-2.5-flash-lite → 1000 RPD.
+// Lite is the only sustainable choice without a paid plan; the system prompt
+// is tuned to drive it through multi-step calls. Override via GEMINI_MODEL.
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
 const MAX_TOOL_LOOPS = 8;
 
 interface ChatRequestBody {
